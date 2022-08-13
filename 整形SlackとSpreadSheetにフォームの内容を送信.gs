@@ -1,53 +1,67 @@
 //e = event object
 function autoReply(e) {
+  const SHEET = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('整形');
   let [timeStamp, investigateDate, investigateTimeZone, location, id, personInvestigator, familyInvestigator, institution, opinions] = e.values;
 
-  let locationId;
+  let ID;
   if (location == '大和') {
-    locationId = 'Y';
+    ID = `Y${id}`;
   } else if (location == '福岡') {
-    locationId = 'H';
+    ID = `H${id}`;
   } else if (location == '京都') {
-    locationId = 'K';
+    ID = `K${id}`;
   } else if (location == '湯沢') {
-    locationId = 'YZ'
+    ID = `YZ${id}`;
   } else if (location == '新潟') {
-    locationId = 'N'
+    ID = `N${id}`;
   } else {
-    locationId = 'その他'
+    ID = `${location}${id}`;
   }
   let slackBody = `
   ${investigateDate}
-  ${investigateTimeZone}  ${locationId}${id}  ${institution}
+  ${investigateTimeZone}  ${ID}  ${institution}
   本人: ${personInvestigator}   家族: ${familyInvestigator}
   ${opinions}
   `;
   let spreadsheetBody = `
   投稿日時 ${timeStamp}
   調査日時 ${investigateDate}
-  ${investigateTimeZone}   ${institution}
+  ${investigateTimeZone}  ${ID}  ${institution}
   本人: ${personInvestigator}   家族: ${familyInvestigator}
   ${opinions}
   `;
-  const ID = `${locationId}${id}`;
 
+  let idLocation = isCorrectId(SHEET, ID);
   notifySlack(slackBody);
-  sendSpreadsheet(spreadsheetBody, ID);
+  sendSpreadsheet(SHEET, spreadsheetBody, idLocation);
 }
 
-function sendSpreadsheet(body, ID) {
-  const SHEET = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('整形');
+function isCorrectId(SHEET, ID) {
+  //整形シートのID行を取得して1次元配列に直し，formに入力されたIDを検索できるようにする
   let data = SHEET.getRange(2, 2, SHEET.getLastRow() - 1).getValues(); //2行目を2列めから最終列まで取得
   data = data.flat();//2次元配列を1次元配列に治す
 
-  for (let i = 2; i < 100; i++) {
-    cellLocation = SHEET.getRange(data.indexOf(ID)+2, i);
+  let idLocation = data.indexOf(ID); //formに入力されたIDの列のインデックスを取得
+  console.log(idLocation)
+  if (idLocation == -1) { //indexOfで見つからなかったときは-1が返ってくる
+    idLocation = data.indexOf('その他') + 2; //その他のインデックスを入れる
+  } else {
+    idLocation += 2; //インデックス位置を調整する
+  }
+  return (idLocation)
+}
+
+function sendSpreadsheet(SHEET, body, idLocation) {
+  //formに入力されたIDの列の空白セルを取得する（横向きに空白セルを検索していく）
+  //とりあえず100行まで検索すれば空白セルは現れるだろう
+  for (let i = 2; i < 50; i++) {
+    cellLocation = SHEET.getRange(idLocation, i);
     if (cellLocation.isBlank() == true) {
       cellLocation.setValue(body)
       break;
     }
-    else if (i == 99) {
-      Logger.log("error");
+    else if (i == 49) {
+      console.error('IDが見つかりませんでした')
     }
   }
 }
