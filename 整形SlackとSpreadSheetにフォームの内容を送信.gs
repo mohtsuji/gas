@@ -3,6 +3,9 @@ function autoReply(e) {
   const SHEET = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('整形');
   let [timeStamp, investigateDate, investigateTimeZone, location, id, personInvestigator, familyInvestigator, institution, opinions] = e.values;
 
+  //idが全角で入力されていた場合，半角にする
+  id = hankaku2Zenkaku(id);
+
   let ID;
   if (location == '大和') {
     ID = `Y${id}`;
@@ -84,3 +87,14 @@ function notifySlack(message) {
 
   UrlFetchApp.fetch(postUrl, options);
 }
+
+function hankaku2Zenkaku(str) {
+    return str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+        return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+    });
+}
+
+
+
+
+
