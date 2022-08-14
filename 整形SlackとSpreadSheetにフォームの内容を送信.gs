@@ -1,3 +1,8 @@
+/*
+やること
+・Formの編集送信に対応
+*/
+
 //e = event object
 function autoReply(e) {
   const SHEET = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('整形');
@@ -34,18 +39,19 @@ function autoReply(e) {
   ${opinions}
   `;
 
-  let idLocation = isCorrectId(SHEET, ID);
-  notifySlack(slackBody);
-  sendSpreadsheet(SHEET, spreadsheetBody, idLocation);
+  let idLocation = isCorrectId(SHEET, ID); //入力するセルの位置を取得。入力された地域とIDに一致するものが見つかるかを探す。見つからなければその他に分類する
+  notifySlack(slackBody); //slackに通知を送る
+  sendSpreadsheet(SHEET, spreadsheetBody, idLocation); //スプレッドシートに書き込む
 }
 
+//入力された地域とIDに一致するものが見つかるかを探す。見つからなければその他に分類する
 function isCorrectId(SHEET, ID) {
   //整形シートのID行を取得して1次元配列に直し，formに入力されたIDを検索できるようにする
   let data = SHEET.getRange(2, 2, SHEET.getLastRow() - 1).getValues(); //2行目を2列めから最終列まで取得
   data = data.flat();//2次元配列を1次元配列に治す
 
   let idLocation = data.indexOf(ID); //formに入力されたIDの列のインデックスを取得
-  console.log(idLocation)
+  
   if (idLocation == -1) { //indexOfで見つからなかったときは-1が返ってくる
     idLocation = data.indexOf('その他') + 2; //その他のインデックスを入れる
   } else {
