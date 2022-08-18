@@ -1,3 +1,5 @@
+//次は編集を受け取れるようにする
+
 function doPost(e){
   
   const SHEET = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('読み込み')
@@ -12,10 +14,15 @@ function doPost(e){
 
   //特定のチャンネルの投稿のみ取得
   const CHANNEL = PropertiesService.getScriptProperties().getProperty("CHANNEL");
-  if (params.event.channel == CHANNEL) {
+  if (params.event.channel == CHANNEL && params.event.type == 'message') {
     const memberList = getUser();  // メンバーリスト取得
-    if (params.event.thread_ts) { //それがリプライであった場合
-      tsLocation = getReplyThread(params.event.thread_ts, SHEET) //SpreadSheet上でthreadのもとの投稿が記録されている位置を取得
+    
+    //編集であった場合
+    if (params.event.subtype === 'message_changed') {
+      tsLocation = getThread(params.event.previous_message.ts, SHEET) //SpreadSheet上でthreadのもとの投稿が記録されている位置を取得
+      appendEdited(params, SHEET, tsLocation);
+    } else if (params.event.thread_ts) { //それがリプライであった場合
+      tsLocation = getThread(params.event.thread_ts, SHEET) //SpreadSheet上でthreadのもとの投稿が記録されている位置を取得
       appendReply(params, SHEET, tsLocation); //replyを書き込む
     } else {
       const TYPE = params.event.type; //後でmessageではなく，投稿，編集などわかりやすくする
@@ -29,26 +36,42 @@ function doPost(e){
   }
 }
 
-function appendReply(params, SHEET, tsLocation) {
+function appendEdited(params, SHEET, tsLocation) {
   //threadの列の空白セルを取得する（横向きに空白セルを検索していく）
-  //とりあえず50行まで検索すれば空白セルは現れるだろう
-  for (let i = 2; i < 50; i++) {
+  //とりあえず100行まで検索すれば空白セルは現れるだろう
+  for (let i = 2; i < 100; i++) {
     cellLocation = SHEET.getRange(tsLocation, i);
     if (cellLocation.isBlank() == true) {
-      cellLocation.setValue(params.event.text)
+      let body = '編集\n'+params.event.message.text;
+      cellLocation.setValue(body)
       break;
     }
-    else if (i == 49) {
+    else if (i == 99) {
       console.error('threadが見つかりませんでした')
     }
   }
 }
 
-function getReplyThread(threadTs, SHEET) {
+function appendReply(params, SHEET, tsLocation) {
+  //threadの列の空白セルを取得する（横向きに空白セルを検索していく）
+  //とりあえず100行まで検索すれば空白セルは現れるだろう
+  for (let i = 2; i < 100; i++) {
+    cellLocation = SHEET.getRange(tsLocation, i);
+    if (cellLocation.isBlank() == true) {
+      let body = 'リプライ\n'+params.event.text;
+      cellLocation.setValue(body)
+      break;
+    }
+    else if (i == 99) {
+      console.error('threadが見つかりませんでした')
+    }
+  }
+}
+
+function getThread(threadTs, SHEET) {
   //読み込みシートのTS行を取得して1次元配列に直し，TSを検索できるようにする
   let data = SHEET.getRange(2, 5, SHEET.getLastRow() - 1).getValues(); //5行目を2列めから最終列まで取得
   data = data.flat();//2次元配列を1次元配列に治す
-  console.log(data);
 
   //spreadSheetが勝手に小数点以下を５桁にしてしまうので，検索でちゃんと見つけられるように５桁に揃える
   threadTs = Number(threadTs);
@@ -93,6 +116,16 @@ function test() {
   console.log(num)
   num = Math.floor(num*100000)/100000
   console.log(num)
+}
+
+function test2() {
+  let tmp = ['tako','neko']
+  console.log(tmp)
+  console.log(tmp[0])
+  console.log(tmp.find['tako'])
+  console.log(tmp.indexOf('tako'))
+  console.log(tmp.indexOf('ika'))
+  console.log(tmp['tako'])
 }
 
 
