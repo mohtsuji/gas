@@ -1,3 +1,5 @@
+//なんか承認？セッション？が切れてしまうからその対応をしたい
+
 //slackに投稿があった場合にeventを受け取る
 function doPost(e){
   const SHEET = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('整形')
@@ -15,9 +17,13 @@ function doPost(e){
   if (params.event.channel == CHANNEL && params.event.type == 'message') {
     const memberList = getUser();  // メンバーリスト取得
 
-    if (params.event.thread_ts) { //それがリプライであった場合
+    //編集であった場合
+    if (params.event.subtype === 'message_changed') {
+      tsLocation = getThread(params.event.previous_message.ts, SHEET) //SpreadSheet上でthreadのもとの投稿が記録されている位置を取得
+      sendSpreadsheetEdited(SHEET, params, tsLocation,memberList);
+    } else if (params.event.thread_ts) { //それがリプライであった場合
       tsLocation = getThread(params.event.thread_ts, SHEET) //SpreadSheet上でthreadのもとの投稿が記録されている位置を取得
-      sendSpreadsheetReply(SHEET, params, tsLocation); //replyを書き込む
+      sendSpreadsheetReply(SHEET, params, tsLocation, memberList); //replyを書き込む
     } else {
       //SpreadSheetの書き込む場所を特定するためにIDのみ抽出
       let text = params.event.text.split('\n');
@@ -28,14 +34,31 @@ function doPost(e){
   }
 }
 
-function sendSpreadsheetReply(SHEET, params, idLocation) {
+function sendSpreadsheetEdited(SHEET, params, idLocation,memberList) {
+  //formに入力されたIDの列の空白セルを取得する（横向きに空白セルを検索していく）
+  //とりあえず50行まで検索すれば空白セルは現れるだろう
+  for (let i = 3; i < 50; ) {
+    cellLocation = SHEET.getRange(idLocation, i);
+    if (cellLocation.isBlank() == true) {
+      cellLocation.setValue(params.event.message.ts); //空白行にtsを記入
+      SHEET.getRange(idLocation, i+1).setValue(`編集元のts:${params.event.previous_message.ts}\nユーザー:${memberList[params.event.message.user]}\n${params.event.message.text}`); //次の空白行にtextを記入
+      break;
+    }
+    else if (i > 48) {
+      console.error('IDが見つかりませんでした')
+    }
+    i+=2;//必ずtsとtextで2行ずつ消費しているので，1つ飛ばしで検索する
+  }
+}
+
+function sendSpreadsheetReply(SHEET, params, idLocation, memberList) {
   //formに入力されたIDの列の空白セルを取得する（横向きに空白セルを検索していく）
   //とりあえず50行まで検索すれば空白セルは現れるだろう
   for (let i = 3; i < 50; ) {
     cellLocation = SHEET.getRange(idLocation, i);
     if (cellLocation.isBlank() == true) {
       cellLocation.setValue(params.event.ts); //空白行にtsを記入
-      SHEET.getRange(idLocation, i+1).setValue(`リプライ元のts:${params.event.thread_ts}\n${params.event.text}`); //次の空白行にtextを記入
+      SHEET.getRange(idLocation, i+1).setValue(`リプライ元のts:${params.event.thread_ts}\nユーザー:${memberList[params.event.user]}\n${params.event.text}`); //次の空白行にtextを記入
       break;
     }
     else if (i > 48) {
@@ -76,22 +99,6 @@ function isCorrectId(SHEET, id) {
     idLocation += 2; //インデックス位置を調整する
   }
   return (idLocation)
-}
-
-function appendEdited(params, SHEET, tsLocation) {
-  //threadの列の空白セルを取得する（横向きに空白セルを検索していく）
-  //とりあえず100行まで検索すれば空白セルは現れるだろう
-  for (let i = 2; i < 100; i++) {
-    cellLocation = SHEET.getRange(tsLocation, i);
-    if (cellLocation.isBlank() == true) {
-      let body = '編集\n'+params.event.message.text;
-      cellLocation.setValue(body)
-      break;
-    }
-    else if (i == 99) {
-      console.error('threadが見つかりませんでした')
-    }
-  }
 }
 
 function getThread(threadTs, SHEET) {
