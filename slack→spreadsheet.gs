@@ -1,6 +1,5 @@
 
 function doPost(e){
-  
   const SHEET = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('整形')
   var params = JSON.parse(e.postData.getDataAsString());
 
@@ -16,23 +15,52 @@ function doPost(e){
   if (params.event.channel == CHANNEL && params.event.type == 'message') {
     const memberList = getUser();  // メンバーリスト取得
     
-    //編集であった場合
-    if (params.event.subtype === 'message_changed') {
-      tsLocation = getThread(params.event.previous_message.ts, SHEET) //SpreadSheet上でthreadのもとの投稿が記録されている位置を取得
-      appendEdited(params, SHEET, tsLocation);
-    } else if (params.event.thread_ts) { //それがリプライであった場合
-      tsLocation = getThread(params.event.thread_ts, SHEET) //SpreadSheet上でthreadのもとの投稿が記録されている位置を取得
-      appendReply(params, SHEET, tsLocation); //replyを書き込む
-    } else {
-      const TYPE = params.event.type; //後でmessageではなく，投稿，編集などわかりやすくする
-      const DATE = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm')
-      const USER = memberList[params.event.user];
-      const TEXT = params.event.text;
-      const TS = String(params.event.ts);
-      const DATA = [DATE, TYPE, USER, TEXT, TS]
-      SHEET.appendRow(DATA)  
+      //SpreadSheetの書き込む場所を特定するためにIDのみ抽出
+      let text = params.event.text.split('\n');
+      let id = text[0]; //textの1行目（IDのみ）を取得
+      let idLocation = isCorrectId(SHEET, id); //入力するセルの位置を取得。入力された地域とIDに一致するものが見つかるかを探す。見つからなければその他に分類する
+      let spreadSheetBody = createSpreadsheetBody(params);
+      sendSpreadsheet(SHEET, spreadSheetBody, idLocation); //スプレッドシートに書き込む 
+    
+  }
+}
+
+function sendSpreadsheet(SHEET, spreadSheetBody, idLocation) {
+  //formに入力されたIDの列の空白セルを取得する（横向きに空白セルを検索していく）
+  //とりあえず50行まで検索すれば空白セルは現れるだろう
+  for (let i = 2; i < 50; i++) {
+    cellLocation = SHEET.getRange(idLocation, i);
+    if (cellLocation.isBlank() == true) {
+      cellLocation.setValue(spreadSheetBody)
+      break;
+    }
+    else if (i == 49) {
+      console.error('IDが見つかりませんでした')
     }
   }
+}
+
+//入力された地域とIDに一致するものが見つかるかを探す。見つからなければその他に分類する
+function isCorrectId(SHEET, id) {
+  //整形シートのID行を取得して1次元配列に直し，formに入力されたIDを検索できるようにする
+  let data = SHEET.getRange(2, 2, SHEET.getLastRow() - 1).getValues(); //2行目を2列めから最終列まで取得
+  data = data.flat();//2次元配列を1次元配列に治す
+
+  let idLocation = data.indexOf(id); //formに入力されたIDの列のインデックスを取得
+  
+  if (idLocation == -1) { //indexOfで見つからなかったときは-1が返ってくる
+    idLocation = data.indexOf('その他') + 2; //その他のインデックスを入れる
+  } else {
+    idLocation += 2; //インデックス位置を調整する
+  }
+  return (idLocation)
+}
+
+function createSpreadsheetBody(params) {
+  const text = params.event.text;
+  const ts = String(params.event.ts);
+  const body = `ts:${ts}\n${text}`;
+  return (body);
 }
 
 function appendEdited(params, SHEET, tsLocation) {
@@ -86,7 +114,7 @@ function getThread(threadTs, SHEET) {
 }
 
 function getUser(cursor) {
-  const TOKEN = PropertiesService.getScriptProperties().getProperty('TOKEN')
+  const TOKEN = PropertiesService.getScriptProperties().getProperty('TOKEN');
   const limit =500;
   const options = {
     "method" : "get",
@@ -108,7 +136,6 @@ function getUser(cursor) {
   }
   return (memberList)
 }
-
 
 
 
