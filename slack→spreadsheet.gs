@@ -1,4 +1,4 @@
-
+//slackに投稿があった場合にeventを受け取る
 function doPost(e){
   const SHEET = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('整形')
   var params = JSON.parse(e.postData.getDataAsString());
@@ -14,29 +14,34 @@ function doPost(e){
   const CHANNEL = PropertiesService.getScriptProperties().getProperty("CHANNEL");
   if (params.event.channel == CHANNEL && params.event.type == 'message') {
     const memberList = getUser();  // メンバーリスト取得
-    
+
+    if (params.event.thread_ts) { //それがリプライであった場合
+      tsLocation = getThread(params.event.thread_ts, SHEET) //SpreadSheet上でthreadのもとの投稿が記録されている位置を取得
+      appendReply(params, SHEET, tsLocation); //replyを書き込む
+    } else {
       //SpreadSheetの書き込む場所を特定するためにIDのみ抽出
       let text = params.event.text.split('\n');
       let id = text[0]; //textの1行目（IDのみ）を取得
       let idLocation = isCorrectId(SHEET, id); //入力するセルの位置を取得。入力された地域とIDに一致するものが見つかるかを探す。見つからなければその他に分類する
-      let spreadSheetBody = createSpreadsheetBody(params);
-      sendSpreadsheet(SHEET, spreadSheetBody, idLocation); //スプレッドシートに書き込む 
-    
+      sendSpreadsheet(SHEET, params, idLocation); //スプレッドシートに書き込む 
+    }
   }
 }
 
-function sendSpreadsheet(SHEET, spreadSheetBody, idLocation) {
+function sendSpreadsheet(SHEET, params, idLocation) {
   //formに入力されたIDの列の空白セルを取得する（横向きに空白セルを検索していく）
   //とりあえず50行まで検索すれば空白セルは現れるだろう
-  for (let i = 2; i < 50; i++) {
+  for (let i = 3; i < 50; ) {
     cellLocation = SHEET.getRange(idLocation, i);
     if (cellLocation.isBlank() == true) {
-      cellLocation.setValue(spreadSheetBody)
+      cellLocation.setValue(params.event.ts); //空白行にtsを記入
+      SHEET.getRange(idLocation, i+1).setValue(params.event.text); //次の空白行にtextを記入
       break;
     }
-    else if (i == 49) {
+    else if (i > 48) {
       console.error('IDが見つかりませんでした')
     }
+    i+=2;//必ずtsとtextで2行ずつ消費しているので，1つ飛ばしで検索する
   }
 }
 
@@ -54,13 +59,6 @@ function isCorrectId(SHEET, id) {
     idLocation += 2; //インデックス位置を調整する
   }
   return (idLocation)
-}
-
-function createSpreadsheetBody(params) {
-  const text = params.event.text;
-  const ts = String(params.event.ts);
-  const body = `ts:${ts}\n${text}`;
-  return (body);
 }
 
 function appendEdited(params, SHEET, tsLocation) {
