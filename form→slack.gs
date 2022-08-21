@@ -1,8 +1,3 @@
-/*
-やること
-・Formの編集送信に対応
-*/
-
 //e = event object
 function autoReply(e) {
   const SHEET = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('整形');
@@ -13,21 +8,20 @@ function autoReply(e) {
 
   let ID;
   if (location == '大和') {
-    ID = `Y${id}`;
+    ID = `Y-${id}`;
   } else if (location == '福岡') {
-    ID = `H${id}`;
+    ID = `H-${id}`;
   } else if (location == '京都') {
-    ID = `K${id}`;
+    ID = `K-${id}`;
   } else if (location == '湯沢') {
-    ID = `YZ${id}`;
+    ID = `YZ-${id}`;
   } else if (location == '新潟') {
-    ID = `N${id}`;
+    ID = `N-${id}`;
   } else {
-    ID = `${location}${id}`;
+    ID = `${location}-${id}`;
   }
   let slackBody = `
-  ${investigateDate}
-  ${investigateTimeZone}  ${ID}  ${institution}
+  ${ID}  ${investigateDate}  ${investigateTimeZone}  ${institution}
   本人: ${personInvestigator}   家族: ${familyInvestigator}
   ${opinions}
   `;
