@@ -10,8 +10,6 @@ function doPost(e){
     return ContentService.createTextOutput(params.challenge);
   }
 
-  console.log(params)
-
   //特定のチャンネルの投稿のみ取得
   const CHANNEL = PropertiesService.getScriptProperties().getProperty("CHANNEL");
   if (params.event.channel == CHANNEL && params.event.type == 'message') {
@@ -45,7 +43,7 @@ function sendSpreadsheetEdited(SHEET, params, idLocation,memberList) {
       break;
     }
     else if (i > 48) {
-      console.error('IDが見つかりませんでした')
+      console.error('Edited:IDが見つかりませんでした')
     }
     i+=2;//必ずtsとtextで2行ずつ消費しているので，1つ飛ばしで検索する
   }
@@ -62,7 +60,7 @@ function sendSpreadsheetReply(SHEET, params, idLocation, memberList) {
       break;
     }
     else if (i > 48) {
-      console.error('IDが見つかりませんでした')
+      console.error('Reply:IDが見つかりませんでした')
     }
     i+=2;//必ずtsとtextで2行ずつ消費しているので，1つ飛ばしで検索する
   }
