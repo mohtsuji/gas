@@ -1,5 +1,3 @@
-//なんか承認？セッション？が切れてしまうからその対応をしたい
-
 //slackに投稿があった場合にeventを受け取る
 function doPost(e){
   const SHEET = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('整形')

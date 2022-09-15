@@ -1,7 +1,7 @@
 //e = event object
 function autoReply(e) {
 //  const SHEET = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('整形');
-  let [timeStamp, investigateDate, investigateTimeZone, location, id, personInvestigator, familyInvestigator, institution, opinions] = e.values;
+  let [timeStamp, investigateDate, name, investigateTimeZone, location, id, personInvestigator, familyInvestigator, institution, opinions] = e.values;
 
   //idが全角で入力されていた場合，半角にする
   id = hankaku2Zenkaku(id);
@@ -22,6 +22,7 @@ function autoReply(e) {
   }
   let slackBody = `${ID}
 ${investigateDate}  ${investigateTimeZone}  ${institution}
+記入者：${name}
 本人: ${personInvestigator}   家族: ${familyInvestigator}
 ${opinions}`;
 
